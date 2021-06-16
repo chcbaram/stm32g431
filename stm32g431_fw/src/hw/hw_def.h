@@ -11,6 +11,9 @@
 #include "bsp.h"
 
 
+#define _USE_HW_RTC
+#define _USE_HW_RESET
+
 #define _USE_HW_LED
 #define      HW_LED_MAX_CH          2
 
