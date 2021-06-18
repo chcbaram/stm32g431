@@ -1,8 +1,9 @@
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * File Name          : RTC.h
-  * Description        : This file provides code for the configuration
-  *                      of the RTC instances.
+  * @file           : usbd_cdc_if.h
+  * @version        : v3.0_Cube
+  * @brief          : Header for usbd_cdc_if.c file.
   ******************************************************************************
   * @attention
   *
@@ -16,43 +17,42 @@
   *
   ******************************************************************************
   */
+/* USER CODE END Header */
+
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __rtc_H
-#define __rtc_H
+#ifndef __USBD_CDC_IF_H__
+#define __USBD_CDC_IF_H__
+
 #ifdef __cplusplus
  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
+#include "usbd_cdc.h"
 
-/* USER CODE BEGIN Includes */
+#define APP_RX_DATA_SIZE  1000
+#define APP_TX_DATA_SIZE  1000
 
-/* USER CODE END Includes */
 
-extern RTC_HandleTypeDef hrtc;
+extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
-/* USER CODE BEGIN Private defines */
 
-/* USER CODE END Private defines */
 
-void MX_RTC_Init(void);
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 
-/* USER CODE BEGIN Prototypes */
 
-/* USER CODE END Prototypes */
+bool     cdcIfInit(void);
+uint32_t cdcIfAvailable(void);
+uint8_t  cdcIfRead(void);
+uint32_t cdcIfGetBaud(void);
+uint32_t cdcIfWrite(uint8_t *p_data, uint32_t length);
+bool     cdcIfIsConnected(void);
+
 
 #ifdef __cplusplus
 }
 #endif
-#endif /*__ rtc_H */
 
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
+#endif /* __USBD_CDC_IF_H__ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

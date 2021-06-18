@@ -21,7 +21,7 @@
 #include "main.h"
 #include "fdcan.h"
 #include "rtc.h"
-#include "usb.h"
+#include "usb_device.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -90,7 +90,7 @@ int main(void)
   MX_GPIO_Init();
   MX_FDCAN1_Init();
   MX_RTC_Init();
-  MX_USB_PCD_Init();
+  MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */

@@ -31,5 +31,9 @@ bool hwInit(void)
     resetToSysBoot();
   }
 
+  ret &= usbInit();
+  ret &= usbBegin(USB_CDC_MODE);
+
+
   return ret;
 }

@@ -31,10 +31,24 @@ void apMain(void)
       ledToggle(_DEF_LED1);
     }
 
-    if (millis()-pre_time[1] >= 100)
+    if (cdcIsConnect() == true)
     {
-      pre_time[1] = millis();
-      ledToggle(_DEF_LED2);
+      ledOn(_DEF_LED2);
+    }
+    else
+    {
+      ledOff(_DEF_LED2);
+    }
+
+    if (cdcAvailable() > 0)
+    {
+      uint8_t rx_data;
+
+      rx_data = cdcRead();
+
+      cdcWrite("RX : ", 5);
+      cdcWrite(&rx_data, 1);
+      cdcWrite("\n", 1);
     }
   }
 }

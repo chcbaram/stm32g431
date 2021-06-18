@@ -15,7 +15,8 @@
 #include "led.h"
 #include "rtc.h"
 #include "reset.h"
-
+#include "cdc.h"
+#include "usb.h"
 
 bool hwInit(void);
 
