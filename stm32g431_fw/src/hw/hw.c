@@ -19,6 +19,7 @@ bool hwInit(void)
 
   ret &= bspInit();
 
+  ret &= cliInit();
   ret &= rtcInit();
   ret &= resetInit();
   ret &= ledInit();
@@ -26,14 +27,13 @@ bool hwInit(void)
 
   if (resetGetCount() == 2)
   {
-    // Jump To SystemBootloader
-    //
     resetToSysBoot();
   }
 
   ret &= usbInit();
   ret &= usbBegin(USB_CDC_MODE);
-
+  ret &= uartInit();
+  ret &= uartOpen(_DEF_UART1, 57600);
 
   return ret;
 }

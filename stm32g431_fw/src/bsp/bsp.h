@@ -20,4 +20,6 @@ uint32_t millis(void);
 
 void Error_Handler(void);
 
+void logPrintf(const char *fmt, ...);
+
 #endif /* SRC_BSP_BSP_H_ */

@@ -17,6 +17,8 @@
 #include "reset.h"
 #include "cdc.h"
 #include "usb.h"
+#include "uart.h"
+#include "cli.h"
 
 bool hwInit(void);
 
