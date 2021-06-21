@@ -10,4 +10,11 @@
 
 #include "hw.h"
 
+
+typedef struct
+{
+  bool (*keepLoop)(void);
+} mode_args_t;
+
+
 #endif /* SRC_AP_AP_DEF_H_ */
