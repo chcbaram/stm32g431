@@ -10,6 +10,9 @@
 
 
 
+//static uint8_t can_ch = _DEF_CAN1;
+
+
 
 
 bool canModeInit(void)

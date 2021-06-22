@@ -165,8 +165,8 @@ g_pfnVectors:
   .word	ADC1_2_IRQHandler          			/* ADC1 and ADC2 global interrupt  */
   .word	USB_HP_IRQHandler          			/* USB_HP                          */
   .word	USB_LP_IRQHandler          			/* USB_LP                          */
-  .word	fdcan1_intr1_it_IRQHandler 			/* FDCAN1 interrupt                */
-  .word	fdcan1_intr0_it_IRQHandler 			/* FDCAN1 interrupt                */
+  .word	FDCAN1_IT0_IRQHandler 				/* FDCAN1 interrupt                */
+  .word	FDCAN1_IT1_IRQHandler 				/* FDCAN1 interrupt                */
   .word	EXTI9_5_IRQHandler         			/* EXTI9_5                         */
   .word	TIM1_BRK_TIM15_IRQHandler  			/* TIM1_BRK_TIM15                  */
   .word	TIM1_UP_TIM16_IRQHandler   			/* TIM1_UP_TIM16                   */
@@ -342,11 +342,11 @@ g_pfnVectors:
 	.weak	USB_LP_IRQHandler
 	.thumb_set USB_LP_IRQHandler,Default_Handler
 
-	.weak	fdcan1_intr1_it_IRQHandler
-	.thumb_set fdcan1_intr1_it_IRQHandler,Default_Handler
+	.weak	FDCAN1_IT0_IRQHandler
+	.thumb_set FDCAN1_IT0_IRQHandler,Default_Handler
 
-	.weak	fdcan1_intr0_it_IRQHandler
-	.thumb_set fdcan1_intr0_it_IRQHandler,Default_Handler
+	.weak	FDCAN1_IT1_IRQHandler
+	.thumb_set FDCAN1_IT1_IRQHandler,Default_Handler
 
 	.weak	EXTI9_5_IRQHandler
 	.thumb_set EXTI9_5_IRQHandler,Default_Handler

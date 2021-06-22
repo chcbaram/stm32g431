@@ -19,6 +19,8 @@
 #include "usb.h"
 #include "uart.h"
 #include "cli.h"
+#include "can.h"
+
 
 bool hwInit(void);
 
