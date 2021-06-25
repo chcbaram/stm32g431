@@ -30,7 +30,6 @@ typedef enum
   CAN_500K,
   CAN_1M,
   CAN_2M,
-  CAN_3M,
   CAN_4M,
   CAN_5M
 } can_baud_t;

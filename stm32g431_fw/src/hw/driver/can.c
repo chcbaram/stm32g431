@@ -88,6 +88,11 @@ typedef struct
   bool is_init;
   bool is_open;
 
+  uint32_t q_rx_full_cnt;
+  uint32_t q_tx_full_cnt;
+  uint32_t fifo_full_cnt;
+  uint32_t fifo_lost_cnt;
+
   uint32_t fifo_idx;
   uint32_t fifo_int;
   can_mode_t  mode;
@@ -122,6 +127,12 @@ bool canInit(void)
   {
     can_tbl[i].is_init = true;
     can_tbl[i].is_open = false;
+
+    can_tbl[i].q_rx_full_cnt = 0;
+    can_tbl[i].q_tx_full_cnt = 0;
+    can_tbl[i].fifo_full_cnt = 0;
+    can_tbl[i].fifo_lost_cnt = 0;
+
     qbufferCreateBySize(&can_tbl[i].q_msg, (uint8_t *)&can_tbl[i].can_msg[0], sizeof(can_msg_t), CAN_MSG_RX_BUF_MAX);
   }
 
@@ -328,19 +339,16 @@ uint32_t canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout)
   tx_header.DataLength          = dlc_tbl[p_msg->dlc];
 
   pre_time = millis();
-  while(millis()-pre_time < timeout)
+
+  if(HAL_FDCAN_AddMessageToTxFifoQ(p_can, &tx_header, p_msg->data) == HAL_OK)
   {
-    if(HAL_FDCAN_AddMessageToTxFifoQ(p_can, &tx_header, p_msg->data) == HAL_OK)
+    /* Wait transmission complete */
+    while(HAL_FDCAN_GetTxFifoFreeLevel(p_can) == 0)
     {
-      /* Wait transmission complete */
-      while(HAL_FDCAN_GetTxFifoFreeLevel(p_can) == 0)
+      if (millis()-pre_time >= timeout)
       {
-        if (millis()-pre_time >= timeout)
-        {
-          return 0;
-        }
+        return 0;
       }
-      break;
     }
   }
 
@@ -460,7 +468,10 @@ void canRxFifoCallback(uint8_t ch, FDCAN_HandleTypeDef *hfdcan)
       rx_buf->frame = CAN_CLASSIC;
     }
 
-    qbufferWrite(&can_tbl[ch].q_msg, NULL, 1);
+    if (qbufferWrite(&can_tbl[ch].q_msg, NULL, 1) != true)
+    {
+      can_tbl[ch].q_rx_full_cnt++;
+    }
 
     if( can_tbl[ch].handler != NULL )
     {
@@ -485,6 +496,16 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
   {
     canRxFifoCallback(_DEF_CAN1, hfdcan);
+  }
+
+  if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_FULL) != RESET)
+  {
+    can_tbl[_DEF_CAN1].fifo_full_cnt++;
+  }
+
+  if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_MESSAGE_LOST) != RESET)
+  {
+    can_tbl[_DEF_CAN1].fifo_lost_cnt++;
   }
 }
 
@@ -543,7 +564,12 @@ void cliCan(cli_args_t *args)
   {
     for (int i=0; i<CAN_MAX_CH; i++)
     {
-      cliPrintf("is_open : %d\n", can_tbl[i].is_open);
+      cliPrintf("is_open       : %d\n", can_tbl[i].is_open);
+
+      cliPrintf("q_rx_full_cnt : %d\n", can_tbl[i].q_rx_full_cnt);
+      cliPrintf("q_tx_full_cnt : %d\n", can_tbl[i].q_tx_full_cnt);
+      cliPrintf("fifo_full_cnt : %d\n", can_tbl[i].fifo_full_cnt);
+      cliPrintf("fifo_lost_cnt : %d\n", can_tbl[i].fifo_lost_cnt);
     }
     ret = true;
   }
