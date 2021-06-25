@@ -172,13 +172,13 @@ bool canOpen(uint8_t ch, can_mode_t mode, can_frame_t frame, can_baud_t baud, ca
       p_can->Init.TransmitPause         = ENABLE;
       p_can->Init.ProtocolException     = ENABLE;
       p_can->Init.NominalPrescaler      = p_baud_normal[baud].prescaler;
-      p_can->Init.NominalSyncJumpWidth  = can_baud_cfg_80m_normal[baud].sjw;
-      p_can->Init.NominalTimeSeg1       = can_baud_cfg_80m_normal[baud].tseg1;
-      p_can->Init.NominalTimeSeg2       = can_baud_cfg_80m_normal[baud].tseg2;
-      p_can->Init.DataPrescaler         = can_baud_cfg_80m_data[baud_data].prescaler;
-      p_can->Init.DataSyncJumpWidth     = can_baud_cfg_80m_data[baud_data].sjw;
-      p_can->Init.DataTimeSeg1          = can_baud_cfg_80m_data[baud_data].tseg1;
-      p_can->Init.DataTimeSeg2          = can_baud_cfg_80m_data[baud_data].tseg2;
+      p_can->Init.NominalSyncJumpWidth  = p_baud_normal[baud].sjw;
+      p_can->Init.NominalTimeSeg1       = p_baud_normal[baud].tseg1;
+      p_can->Init.NominalTimeSeg2       = p_baud_normal[baud].tseg2;
+      p_can->Init.DataPrescaler         = p_baud_data[baud_data].prescaler;
+      p_can->Init.DataSyncJumpWidth     = p_baud_data[baud_data].sjw;
+      p_can->Init.DataTimeSeg1          = p_baud_data[baud_data].tseg1;
+      p_can->Init.DataTimeSeg2          = p_baud_data[baud_data].tseg2;
       p_can->Init.StdFiltersNbr         = 28;
       p_can->Init.ExtFiltersNbr         = 8;
       p_can->Init.TxFifoQueueMode       = FDCAN_TX_FIFO_OPERATION;
@@ -564,24 +564,10 @@ void canErrPrint(uint8_t ch)
   if (err_code & CAN_ERR_BUS_OFF) logPrintf("  ERR : CAN_ERR_BUS_OFF\n");
 }
 
-void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
-{
-  uint32_t err_code = 0;
 
-  if (ErrorStatusITs & FDCAN_IT_ERROR_PASSIVE)
-  {
-    err_code |= (1<<0);
-  }
-  if (ErrorStatusITs & FDCAN_IT_ERROR_WARNING)
-  {
-    err_code |= (1<<1);
-  }
-  if (ErrorStatusITs & FDCAN_IT_BUS_OFF)
-  {
-    err_code |= (1<<2);
-  }
 
-}
+
+
 
 void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
 {
@@ -663,7 +649,7 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* fdcanHandle)
     GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
   }
 }
