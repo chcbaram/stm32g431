@@ -88,13 +88,17 @@ typedef struct
   bool is_init;
   bool is_open;
 
+  uint32_t err_code;
+  uint8_t  state;
+  uint32_t recovery_cnt;
+
   uint32_t q_rx_full_cnt;
   uint32_t q_tx_full_cnt;
   uint32_t fifo_full_cnt;
   uint32_t fifo_lost_cnt;
 
   uint32_t fifo_idx;
-  uint32_t fifo_int;
+  uint32_t enable_int;
   can_mode_t  mode;
   can_frame_t frame;
   can_baud_t  baud;
@@ -125,8 +129,11 @@ bool canInit(void)
 
   for(i = 0; i < CAN_MAX_CH; i++)
   {
-    can_tbl[i].is_init = true;
-    can_tbl[i].is_open = false;
+    can_tbl[i].is_init  = true;
+    can_tbl[i].is_open  = false;
+    can_tbl[i].err_code = CAN_ERR_NONE;
+    can_tbl[i].state    = 0;
+    can_tbl[i].recovery_cnt = 0;
 
     can_tbl[i].q_rx_full_cnt = 0;
     can_tbl[i].q_tx_full_cnt = 0;
@@ -181,7 +188,9 @@ bool canOpen(uint8_t ch, can_mode_t mode, can_frame_t frame, can_baud_t baud, ca
       can_tbl[ch].baud                  = baud;
       can_tbl[ch].baud_data             = baud_data;
       can_tbl[ch].fifo_idx              = FDCAN_RX_FIFO0;
-      can_tbl[ch].fifo_int              = FDCAN_IT_RX_FIFO0_NEW_MESSAGE;
+      can_tbl[ch].enable_int            = FDCAN_IT_LIST_RX_FIFO0 |
+                                          FDCAN_IT_LIST_PROTOCOL_ERROR |
+                                          FDCAN_IT_LIST_BIT_LINE_ERROR;
       ret = true;
       break;
   }
@@ -206,7 +215,7 @@ bool canOpen(uint8_t ch, can_mode_t mode, can_frame_t frame, can_baud_t baud, ca
   {
     return false;
   }
-  if (HAL_FDCAN_ActivateNotification(p_can, can_tbl[ch].fifo_int, 0) != HAL_OK)
+  if (HAL_FDCAN_ActivateNotification(p_can, can_tbl[ch].enable_int, 0) != HAL_OK)
   {
     return false;
   }
@@ -291,14 +300,18 @@ bool canMsgInit(can_msg_t *p_msg, can_frame_t frame, can_id_type_t  id_type, can
   return true;
 }
 
-uint32_t canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout)
+bool canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout)
 {
   FDCAN_HandleTypeDef  *p_can;
   FDCAN_TxHeaderTypeDef tx_header;
   uint32_t pre_time;
+  bool ret = true;
 
 
-  if(ch > CAN_MAX_CH) return 0;
+  if(ch > CAN_MAX_CH) return false;
+
+  if (can_tbl[ch].err_code & CAN_ERR_BUS_OFF) return false;
+
 
   p_can = &can_tbl[ch].hfdcan;
 
@@ -347,15 +360,20 @@ uint32_t canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout)
     {
       if (millis()-pre_time >= timeout)
       {
-        return 0;
+        ret = false;
+        break;
       }
     }
   }
+  else
+  {
+    ret = false;
+  }
 
-  return 1;
+  return ret;
 }
 
-uint32_t canMsgRead(uint8_t ch, can_msg_t *p_msg)
+bool canMsgRead(uint8_t ch, can_msg_t *p_msg)
 {
   bool ret = true;
 
@@ -429,6 +447,48 @@ void canDetachRxInterrupt(uint8_t ch)
   can_tbl[ch].handler = NULL;
 }
 
+void canRecovery(uint8_t ch)
+{
+  if(ch > CAN_MAX_CH) return;
+
+  HAL_FDCAN_Stop(&can_tbl[ch].hfdcan);
+  HAL_FDCAN_Start(&can_tbl[ch].hfdcan);
+
+  can_tbl[ch].recovery_cnt++;
+}
+
+bool canUpdate(void)
+{
+  bool ret = false;
+  can_tbl_t *p_can;
+
+  for (int i=0; i<CAN_MAX_CH; i++)
+  {
+    p_can = &can_tbl[i];
+
+    switch(p_can->state)
+    {
+      case 0:
+        if (p_can->err_code & CAN_ERR_BUS_OFF)
+        {
+          canRecovery(i);
+          p_can->state = 1;
+          ret = true;
+        }
+        break;
+
+      case 1:
+        if ((p_can->err_code & CAN_ERR_BUS_OFF) == 0)
+        {
+          p_can->state = 0;
+        }
+        break;
+    }
+  }
+
+  return ret;
+}
+
 void canRxFifoCallback(uint8_t ch, FDCAN_HandleTypeDef *hfdcan)
 {
   can_msg_t *rx_buf;
@@ -483,8 +543,81 @@ void canRxFifoCallback(uint8_t ch, FDCAN_HandleTypeDef *hfdcan)
   }
 }
 
+void canErrClear(uint8_t ch)
+{
+  if(ch > CAN_MAX_CH) return;
+
+  can_tbl[ch].err_code = CAN_ERR_NONE;
+}
+
+void canErrPrint(uint8_t ch)
+{
+  uint32_t err_code;
 
 
+  if(ch > CAN_MAX_CH) return;
+
+  err_code = can_tbl[ch].err_code;
+
+  if (err_code & CAN_ERR_PASSIVE) logPrintf("  ERR : CAN_ERR_PASSIVE\n");
+  if (err_code & CAN_ERR_WARNING) logPrintf("  ERR : CAN_ERR_WARNING\n");
+  if (err_code & CAN_ERR_BUS_OFF) logPrintf("  ERR : CAN_ERR_BUS_OFF\n");
+}
+
+void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
+{
+  uint32_t err_code = 0;
+
+  if (ErrorStatusITs & FDCAN_IT_ERROR_PASSIVE)
+  {
+    err_code |= (1<<0);
+  }
+  if (ErrorStatusITs & FDCAN_IT_ERROR_WARNING)
+  {
+    err_code |= (1<<1);
+  }
+  if (ErrorStatusITs & FDCAN_IT_BUS_OFF)
+  {
+    err_code |= (1<<2);
+  }
+
+}
+
+void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
+{
+  uint8_t ch = _DEF_CAN1;
+  FDCAN_ProtocolStatusTypeDef protocol_status;
+
+
+  HAL_FDCAN_GetProtocolStatus(hfdcan, &protocol_status);
+
+  if (protocol_status.ErrorPassive)
+  {
+    can_tbl[ch].err_code |= CAN_ERR_PASSIVE;
+  }
+  else
+  {
+    can_tbl[ch].err_code &= ~CAN_ERR_PASSIVE;
+  }
+
+  if (protocol_status.Warning)
+  {
+    can_tbl[ch].err_code |= CAN_ERR_WARNING;
+  }
+  else
+  {
+    can_tbl[ch].err_code &= ~CAN_ERR_WARNING;
+  }
+
+  if (protocol_status.BusOff)
+  {
+    can_tbl[ch].err_code |= CAN_ERR_BUS_OFF;
+  }
+  else
+  {
+    can_tbl[ch].err_code &= ~CAN_ERR_BUS_OFF;
+  }
+}
 
 void FDCAN1_IT0_IRQHandler(void)
 {
@@ -570,6 +703,7 @@ void cliCan(cli_args_t *args)
       cliPrintf("q_tx_full_cnt : %d\n", can_tbl[i].q_tx_full_cnt);
       cliPrintf("fifo_full_cnt : %d\n", can_tbl[i].fifo_full_cnt);
       cliPrintf("fifo_lost_cnt : %d\n", can_tbl[i].fifo_lost_cnt);
+      canErrPrint(i);
     }
     ret = true;
   }
@@ -611,7 +745,10 @@ void cliCan(cli_args_t *args)
   {
     uint32_t pre_time;
     uint32_t index = 0;
+    uint32_t err_code;
 
+
+    err_code = can_tbl[_DEF_CAN1].err_code;
 
     while(cliKeepLoop())
     {
@@ -628,31 +765,44 @@ void cliCan(cli_args_t *args)
         msg.length  = 2;
         msg.data[0] = 1;
         msg.data[1] = 2;
-        canMsgWrite(_DEF_CAN1, &msg, 10);
-
-        index %= 1000;
-        cliPrintf("%03d(T) -> id ", index++);
-        if (msg.id_type == CAN_STD)
+        if (canMsgWrite(_DEF_CAN1, &msg, 10) > 0)
         {
-          cliPrintf("std ");
+          index %= 1000;
+          cliPrintf("%03d(T) -> id ", index++);
+          if (msg.id_type == CAN_STD)
+          {
+            cliPrintf("std ");
+          }
+          else
+          {
+            cliPrintf("ext ");
+          }
+          cliPrintf(": 0x%08X, L:%02d, ", msg.id, msg.length);
+          for (int i=0; i<msg.length; i++)
+          {
+            cliPrintf("0x%02X ", msg.data[i]);
+          }
+          cliPrintf("\n");
         }
-        else
-        {
-          cliPrintf("ext ");
-        }
-        cliPrintf(": 0x%08X, L:%02d, ", msg.id, msg.length);
-        for (int i=0; i<msg.length; i++)
-        {
-          cliPrintf("0x%02X ", msg.data[i]);
-        }
-        cliPrintf("\n");
-
 
         if (canGetRxErrCount(_DEF_CAN1) > 0 || canGetTxErrCount(_DEF_CAN1) > 0)
         {
           cliPrintf("ErrCnt : %d, %d\n", canGetRxErrCount(_DEF_CAN1), canGetTxErrCount(_DEF_CAN1));
         }
       }
+
+      if (can_tbl[_DEF_CAN1].err_code != err_code)
+      {
+        cliPrintf("ErrCode : 0x%X\n", can_tbl[_DEF_CAN1].err_code);
+        canErrPrint(_DEF_CAN1);
+        err_code = can_tbl[_DEF_CAN1].err_code;
+      }
+
+      if (canUpdate())
+      {
+        cliPrintf("BusOff Recovery\n");
+      }
+
 
       if (canMsgAvailable(_DEF_CAN1))
       {

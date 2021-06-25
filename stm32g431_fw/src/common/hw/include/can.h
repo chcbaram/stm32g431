@@ -74,6 +74,16 @@ typedef enum
   CAN_DLC_64
 } can_dlc_t;
 
+typedef enum
+{
+  CAN_ERR_NONE      = 0x00000000,
+  CAN_ERR_PASSIVE   = 0x00000001,
+  CAN_ERR_WARNING   = 0x00000002,
+  CAN_ERR_BUS_OFF   = 0x00000004,
+  CAN_ERR_BUS_FAULT = 0x00000008,
+} can_err_t;
+
+
 typedef struct
 {
   uint32_t id;
@@ -96,13 +106,17 @@ bool     canConfigFilter(uint8_t ch, uint8_t index, can_id_type_t id_type, uint3
 
 bool     canMsgInit(can_msg_t *p_msg, can_frame_t frame, can_id_type_t  id_type, can_dlc_t dlc);
 uint32_t canMsgAvailable(uint8_t ch);
-uint32_t canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout);
-uint32_t canMsgRead(uint8_t ch, can_msg_t *p_msg);
+bool     canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout);
+bool     canMsgRead(uint8_t ch, can_msg_t *p_msg);
 
 uint16_t canGetRxErrCount(uint8_t ch);
 uint16_t canGetTxErrCount(uint8_t ch);
 uint32_t canGetError(uint8_t ch);
 uint32_t canGetState(uint8_t ch);
+
+void     canErrClear(uint8_t ch);
+void     canErrPrint(uint8_t ch);
+bool     canUpdate(void);
 
 void     canAttachRxInterrupt(uint8_t ch, bool (*handler)(can_msg_t *arg));
 void     canDetachRxInterrupt(uint8_t ch);
