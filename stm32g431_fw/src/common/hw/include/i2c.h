@@ -15,9 +15,16 @@
 #define I2C_MAX_CH       HW_I2C_MAX_CH
 
 
+typedef enum
+{
+  I2C_FREQ_100KHz,
+  I2C_FREQ_400KHz,
+} i2c_freq_t;
+
+
 bool i2cInit(void);
 bool i2cIsInit(void);
-bool i2cOpen(uint8_t ch, uint32_t freq_khz);
+bool i2cOpen(uint8_t ch, i2c_freq_t freq_khz);
 bool i2cIsOpen(uint8_t ch);
 void i2cReset(uint8_t ch);
 bool i2cIsDeviceReady(uint8_t ch, uint8_t dev_addr);
@@ -37,9 +44,6 @@ bool i2cWrite16Bytes(uint8_t ch, uint16_t dev_addr, uint16_t reg_addr, uint8_t *
 bool i2cReadData(uint8_t ch, uint16_t dev_addr, uint8_t *p_data, uint32_t length, uint32_t timeout);
 bool i2cWriteData(uint8_t ch, uint16_t dev_addr, uint8_t *p_data, uint32_t length, uint32_t timeout);
 
-
-void     i2cSetTimeout(uint8_t ch, uint32_t timeout);
-uint32_t i2cGetTimeout(uint8_t ch);
 
 void     i2cClearErrCount(uint8_t ch);
 uint32_t i2cGetErrCount(uint8_t ch);

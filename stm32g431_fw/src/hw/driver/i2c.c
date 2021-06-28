@@ -29,9 +29,8 @@ static void cliI2C(cli_args_t *args);
 #endif
 
 
-static uint32_t i2c_timeout[I2C_MAX_CH];
 static uint32_t i2c_errcount[I2C_MAX_CH];
-static uint32_t i2c_freq[I2C_MAX_CH];
+static i2c_freq_t i2c_freq[I2C_MAX_CH];
 
 static bool is_init = false;
 static bool is_open[I2C_MAX_CH];
@@ -60,6 +59,11 @@ static i2c_tbl_t i2c_tbl[I2C_MAX_CH] =
         { &hi2c1, GPIOA, GPIO_PIN_15,  GPIOB, GPIO_PIN_7},
     };
 
+static const uint32_t i2c_freq_tbl[] =
+    {
+        0x30909DEC, // 100Khz
+        0x00F07BFF, // 400Khz
+    };
 
 static void delayUs(uint32_t us);
 
@@ -72,7 +76,6 @@ bool i2cInit(void)
 
   for (i=0; i<I2C_MAX_CH; i++)
   {
-    i2c_timeout[i] = 10;
     i2c_errcount[i] = 0;
     is_open[i] = false;
 #ifdef _USE_HW_RTOS
@@ -93,7 +96,7 @@ bool i2cIsInit(void)
   return is_init;
 }
 
-bool i2cOpen(uint8_t ch, uint32_t freq_khz)
+bool i2cOpen(uint8_t ch, i2c_freq_t freq_khz)
 {
   bool ret = false;
 
@@ -112,7 +115,7 @@ bool i2cOpen(uint8_t ch, uint32_t freq_khz)
       is_open[ch] = false;
 
       p_handle->Instance             = I2C1;
-      p_handle->Init.Timing          = ((uint32_t)0x00F07BFF);
+      p_handle->Init.Timing          = i2c_freq_tbl[freq_khz];
       p_handle->Init.OwnAddress1     = 0x00;
       p_handle->Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
       p_handle->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -395,16 +398,6 @@ bool i2cWriteData(uint8_t ch, uint16_t dev_addr, uint8_t *p_data, uint32_t lengt
   return ret;
 }
 
-void i2cSetTimeout(uint8_t ch, uint32_t timeout)
-{
-  i2c_timeout[ch] = timeout;
-}
-
-uint32_t i2cGetTimeout(uint8_t ch)
-{
-  return i2c_timeout[ch];
-}
-
 void i2cClearErrCount(uint8_t ch)
 {
   i2c_errcount[ch] = 0;
@@ -539,7 +532,7 @@ void cliI2C(cli_args_t *args)
     }
     else if(args->isStr(0, "open") == true)
     {
-      i2c_ret = i2cOpen(print_ch, 400);
+      i2c_ret = i2cOpen(print_ch, I2C_FREQ_400KHz);
       if (i2c_ret == true)
       {
         cliPrintf("I2C CH%d Open OK\n", print_ch + 1);
