@@ -20,6 +20,7 @@
 #include "uart.h"
 #include "cli.h"
 #include "can.h"
+#include "i2c.h"
 
 
 bool hwInit(void);

@@ -35,6 +35,7 @@ bool hwInit(void)
   ret &= uartInit();
   ret &= uartOpen(_DEF_UART1, 57600);
   ret &= canInit();
+  ret &= i2cInit();
 
   return ret;
 }
