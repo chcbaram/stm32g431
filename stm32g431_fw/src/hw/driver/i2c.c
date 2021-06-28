@@ -197,7 +197,6 @@ bool i2cIsDeviceReady(uint8_t ch, uint8_t dev_addr)
   LOCK_BEGIN(ch);
   if (HAL_I2C_IsDeviceReady(p_handle, dev_addr << 1, 10, 10) == HAL_OK)
   {
-    __enable_irq();
     return true;
   }
   LOCK_END(ch);
