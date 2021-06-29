@@ -113,9 +113,15 @@ typedef struct
 
 static can_tbl_t can_tbl[CAN_MAX_CH];
 
+static volatile uint32_t err_int_cnt = 0;
+
+
 #ifdef _USE_HW_CLI
 static void cliCan(cli_args_t *args);
 #endif
+
+static void canErrUpdate(uint8_t ch);
+
 
 
 
@@ -189,8 +195,9 @@ bool canOpen(uint8_t ch, can_mode_t mode, can_frame_t frame, can_baud_t baud, ca
       can_tbl[ch].baud_data             = baud_data;
       can_tbl[ch].fifo_idx              = FDCAN_RX_FIFO0;
       can_tbl[ch].enable_int            = FDCAN_IT_LIST_RX_FIFO0 |
-                                          FDCAN_IT_LIST_PROTOCOL_ERROR |
-                                          FDCAN_IT_LIST_BIT_LINE_ERROR;
+                                          FDCAN_IT_BUS_OFF |
+                                          FDCAN_IT_ERROR_WARNING |
+                                          FDCAN_IT_ERROR_PASSIVE;
       ret = true;
       break;
   }
@@ -351,8 +358,14 @@ bool canMsgWrite(uint8_t ch, can_msg_t *p_msg, uint32_t timeout)
   tx_header.TxFrameType         = FDCAN_DATA_FRAME;
   tx_header.DataLength          = dlc_tbl[p_msg->dlc];
 
-  pre_time = millis();
 
+  if (HAL_FDCAN_GetTxFifoFreeLevel(p_can) == 0)
+  {
+    return false;
+  }
+
+
+  pre_time = millis();
   if(HAL_FDCAN_AddMessageToTxFifoQ(p_can, &tx_header, p_msg->data) == HAL_OK)
   {
     /* Wait transmission complete */
@@ -462,9 +475,12 @@ bool canUpdate(void)
   bool ret = false;
   can_tbl_t *p_can;
 
+
   for (int i=0; i<CAN_MAX_CH; i++)
   {
     p_can = &can_tbl[i];
+
+    canErrUpdate(i);
 
     switch(p_can->state)
     {
@@ -564,18 +580,11 @@ void canErrPrint(uint8_t ch)
   if (err_code & CAN_ERR_BUS_OFF) logPrintf("  ERR : CAN_ERR_BUS_OFF\n");
 }
 
-
-
-
-
-
-void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
+void canErrUpdate(uint8_t ch)
 {
-  uint8_t ch = _DEF_CAN1;
   FDCAN_ProtocolStatusTypeDef protocol_status;
 
-
-  HAL_FDCAN_GetProtocolStatus(hfdcan, &protocol_status);
+  HAL_FDCAN_GetProtocolStatus(&can_tbl[ch].hfdcan, &protocol_status);
 
   if (protocol_status.ErrorPassive)
   {
@@ -603,6 +612,18 @@ void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
   {
     can_tbl[ch].err_code &= ~CAN_ERR_BUS_OFF;
   }
+}
+
+
+
+
+void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
+{
+  uint8_t ch = _DEF_CAN1;
+
+  err_int_cnt++;
+
+  canErrUpdate(ch);
 }
 
 void FDCAN1_IT0_IRQHandler(void)
@@ -774,6 +795,12 @@ void cliCan(cli_args_t *args)
         if (canGetRxErrCount(_DEF_CAN1) > 0 || canGetTxErrCount(_DEF_CAN1) > 0)
         {
           cliPrintf("ErrCnt : %d, %d\n", canGetRxErrCount(_DEF_CAN1), canGetTxErrCount(_DEF_CAN1));
+        }
+
+        if (err_int_cnt > 0)
+        {
+          cliPrintf("Cnt : %d\n",err_int_cnt);
+          err_int_cnt = 0;
         }
       }
 
