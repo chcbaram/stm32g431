@@ -18,9 +18,14 @@ extern "C" {
 #ifdef _USE_HW_LOG
 
 #define LOG_CH            HW_LOG_CH
+#define LOG_BOOT_BUF_MAX  HW_LOG_BOOT_BUF_MAX
+#define LOG_LIST_BUF_MAX  HW_LOG_LIST_BUF_MAX
 
 
 bool logInit(void);
+void logEnable(void);
+void logDisable(void);
+void logBoot(uint8_t enable);
 void logPrintf(const char *fmt, ...);
 
 #endif

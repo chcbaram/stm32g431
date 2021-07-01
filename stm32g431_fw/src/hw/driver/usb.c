@@ -119,6 +119,8 @@ bool usbBegin(UsbMode usb_mode)
 
     cdcInit();
 
+    logPrintf("usbBegin     \t\t: CDC_MODE\r\n");
+
     is_usb_mode = USB_CDC_MODE;
     ret = true;
   }
