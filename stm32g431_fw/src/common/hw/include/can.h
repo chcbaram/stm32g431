@@ -81,6 +81,7 @@ typedef enum
   CAN_ERR_WARNING   = 0x00000002,
   CAN_ERR_BUS_OFF   = 0x00000004,
   CAN_ERR_BUS_FAULT = 0x00000008,
+  CAN_ERR_ETC       = 0x00000010,
 } can_err_t;
 
 

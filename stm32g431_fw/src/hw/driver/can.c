@@ -480,7 +480,6 @@ bool canUpdate(void)
   {
     p_can = &can_tbl[i];
 
-    canErrUpdate(i);
 
     switch(p_can->state)
     {
@@ -617,13 +616,25 @@ void canErrUpdate(uint8_t ch)
 
 
 
+
+
+void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
+{
+  uint8_t ch = _DEF_CAN1;
+
+  canErrUpdate(ch);
+}
+
 void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
 {
   uint8_t ch = _DEF_CAN1;
 
   err_int_cnt++;
 
-  canErrUpdate(ch);
+  if (hfdcan->ErrorCode > 0)
+  {
+    can_tbl[ch].err_code |= CAN_ERR_ETC;
+  }
 }
 
 void FDCAN1_IT0_IRQHandler(void)
