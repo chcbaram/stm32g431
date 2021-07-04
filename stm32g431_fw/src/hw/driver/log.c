@@ -120,6 +120,12 @@ bool logBufPrintf(log_buf_t *p_log, char *p_data, uint32_t length)
   if (buf_last > p_log->buf_length_max)
   {
     p_log->buf_index = 0;
+    buf_last = p_log->buf_index + length + 8;
+
+    if (buf_last > p_log->buf_length_max)
+    {
+      return false;
+    }
   }
 
   p_buf = &p_log->buf[p_log->buf_index];
