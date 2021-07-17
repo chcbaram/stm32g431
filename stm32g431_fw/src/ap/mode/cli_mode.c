@@ -19,20 +19,13 @@ bool cliModeInit(void)
 
 void cliModeMain(mode_args_t *args)
 {
-  uint32_t pre_time = millis();
-
 
   logPrintf("cliMode in\n");
 
   while(args->keepLoop())
   {
-    if (millis()-pre_time >= 100)
-    {
-      pre_time = millis();
-      ledToggle(_DEF_LED1);
-    }
-
     cliMain();
+    delay(2);
   }
 
   logPrintf("cliMode out\n");

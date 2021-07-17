@@ -16,9 +16,6 @@ bool hwInit(void)
 {
   bool ret = true;
 
-
-  ret &= bspInit();
-
   ret &= cliInit();
   ret &= logInit();
   ret &= rtcInit();

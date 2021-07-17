@@ -198,7 +198,7 @@ g_pfnVectors:
   .word	SPI3_IRQHandler            			/* SPI3                            */
   .word	UART4_IRQHandler           			/* UART4                           */
   .word	0                          			/* Reserved                        */
-  .word	TIM6_DACUNDER_IRQHandler   			/* TIM6_DACUNDER                   */
+  .word	TIM6_DAC_IRQHandler   			    /* TIM6_DAC                        */
   .word	TIM7_IRQHandler            			/* TIM7                            */
   .word	DMA2_CH1_IRQHandler        			/* DMA2_CH1                        */
   .word	DMA2_CH2_IRQHandler        			/* DMA2_CH2                        */
@@ -429,8 +429,8 @@ g_pfnVectors:
 	.weak	UART4_IRQHandler
 	.thumb_set UART4_IRQHandler,Default_Handler
 
-	.weak	TIM6_DACUNDER_IRQHandler
-	.thumb_set TIM6_DACUNDER_IRQHandler,Default_Handler
+	.weak	TIM6_DAC_IRQHandler
+	.thumb_set TIM6_DAC_IRQHandler,Default_Handler
 
 	.weak	TIM7_IRQHandler
 	.thumb_set TIM7_IRQHandler,Default_Handler

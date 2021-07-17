@@ -10,6 +10,7 @@
 
 #include "def.h"
 
+#include "cmsis_os.h"
 #include "stm32g4xx_hal.h"
 
 

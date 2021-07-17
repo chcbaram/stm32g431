@@ -5,7 +5,7 @@
  *      Author: baram
  */
 
-
+#include "hw_def.h"
 #include "bsp.h"
 
 
@@ -26,7 +26,18 @@ bool bspInit(void)
 
 void delay(uint32_t time_ms)
 {
+#ifdef _USE_HW_RTOS
+  if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+  {
+    osDelay(time_ms);
+  }
+  else
+  {
+    HAL_Delay(time_ms);
+  }
+#else
   HAL_Delay(time_ms);
+#endif
 }
 
 uint32_t millis(void)

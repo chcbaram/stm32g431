@@ -28,7 +28,7 @@ static void apLedUpdate(void);
 static bool apLoopIdle(void);
 static void apGetModeNext(ap_mode_t *p_mode_next);
 
-
+static void ledThread(void const *argument);
 
 
 void apInit(void)
@@ -41,6 +41,12 @@ void apInit(void)
   canModeInit();
 
   mode_args.keepLoop = apLoopIdle;
+
+  osThreadDef(ledThread, ledThread, _HW_DEF_RTOS_THREAD_PRI_LED, 0, _HW_DEF_RTOS_THREAD_MEM_LED);
+  if (osThreadCreate(osThread(ledThread), NULL) == NULL)
+  {
+    logPrintf("ledThread Fail\n");
+  }
 }
 
 void apMain(void)
@@ -69,10 +75,6 @@ bool apLoopIdle(void)
 {
   bool ret = true;
 
-  if (mode == MODE_IDLE)
-  {
-    apLedUpdate();
-  }
 
   apGetModeNext(&mode_next);
   if (mode != mode_next)
@@ -81,7 +83,6 @@ bool apLoopIdle(void)
     ret = false;
 
     ledOff(_DEF_LED1);
-    ledOff(_DEF_LED2);
   }
 
   return ret;
@@ -90,21 +91,27 @@ bool apLoopIdle(void)
 void apLedUpdate(void)
 {
   static uint32_t pre_time = 0;
+  uint32_t led_blink_time;
 
 
-  if (millis()-pre_time >= 1000)
+  if (mode == MODE_CLI)
   {
-    pre_time = millis();
-    ledToggle(_DEF_LED1);
+    led_blink_time = 100;
   }
-
-  if (usbIsOpen() == true)
+  else if (mode == MODE_CAN)
   {
-    ledOn(_DEF_LED2);
+    led_blink_time = 500;
   }
   else
   {
-    ledOff(_DEF_LED2);
+    led_blink_time = 1000;
+  }
+
+
+  if (millis()-pre_time >= led_blink_time)
+  {
+    pre_time = millis();
+    ledToggle(_DEF_LED1);
   }
 }
 
@@ -122,5 +129,16 @@ void apGetModeNext(ap_mode_t *p_mode_next)
   if (usbIsOpen() != true)
   {
     *p_mode_next = MODE_IDLE;
+  }
+}
+
+void ledThread(void const *argument)
+{
+  (void)argument;
+
+  while(1)
+  {
+    apLedUpdate();
+    delay(10);
   }
 }
